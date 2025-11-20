@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Obfuscate and disguise text with layered transformations, live previews, and clipboard-ready output."
+    />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin="anonymous"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <title>Cipher Bloom · Text Obfuscation Studio</title>
+  </head>
+  <body>
+    <div class="background-glow" aria-hidden="true"></div>
+    <div id="app" class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Stealth Suite</p>
+          <h1>Layered text obfuscation, stylized</h1>
+          <p class="subtitle">
+            Blend diacritics, homoglyphs, emoji tunnels, and more with a single
+            tap. Preview changes in real time and export with confidence.
+          </p>
+        </div>
+        <div class="hero-meta">
+          <span class="badge">7 methods</span>
+          <span class="badge badge-accent">Live comparison</span>
+        </div>
+      </header>
+
+      <main class="layout-grid">
+        <section class="panel input-panel" aria-label="Input controls">
+          <div class="panel-header">
+            <h2>Source text</h2>
+            <span id="charCount" aria-live="polite">0 characters</span>
+          </div>
+          <label class="sr-only" for="sourceText">Source text input</label>
+          <textarea
+            id="sourceText"
+            placeholder="Paste or type the text you want to disguise..."
+            rows="8"
+            spellcheck="false"
+          ></textarea>
+
+          <div class="control-block">
+            <div class="control-header">
+              <span class="control-title">Transformation intensity</span>
+              <output id="intensityValue" for="intensity">3</output>
+            </div>
+            <input
+              id="intensity"
+              type="range"
+              min="1"
+              max="5"
+              step="1"
+              value="3"
+              aria-label="Transformation intensity slider"
+            />
+            <p class="control-hint">
+              Boost to increase randomness, frequency, and layered effects.
+            </p>
+          </div>
+
+          <div class="toggle-grid" role="group" aria-label="Obfuscation methods">
+            <label class="toggle">
+              <input type="checkbox" data-transform="diacritics" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Diacritics</span>
+                <span class="toggle-desc">Accent vowels and pairings</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="homoglyphs" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Homoglyphs</span>
+                <span class="toggle-desc">Swap similar-looking glyphs</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="leet" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">l33t speak</span>
+                <span class="toggle-desc">Digit-first substitutions</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="spaces" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Space injection</span>
+                <span class="toggle-desc">Scatter extra whitespace</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="zeroWidth" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Zero-width</span>
+                <span class="toggle-desc">Thread invisible seams</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="emoji" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Emoji smuggling</span>
+                <span class="toggle-desc">Hide text in variation selectors</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="upsideDown" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Upside down</span>
+                <span class="toggle-desc">Flip characters with Unicode twins</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="generateBtn" type="button" class="primary">
+              Generate
+            </button>
+            <button id="resetBtn" type="button" class="ghost">
+              Reset
+            </button>
+          </div>
+          <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="panel preview-panel" aria-label="Preview">
+          <div class="comparison-grid">
+            <article class="text-card" aria-live="polite">
+              <div class="text-card__header">
+                <h3>Original</h3>
+                <span class="pill">live</span>
+              </div>
+              <pre id="originalPreview" class="text-card__body">Start typing to preview the source content.</pre>
+            </article>
+
+            <article class="text-card text-card--accent" aria-live="polite">
+              <div class="text-card__header">
+                <h3>Transformed</h3>
+                <div class="copy-cluster">
+                  <button id="copyBtn" type="button" class="ghost" disabled>
+                    Copy
+                  </button>
+                  <span id="copyFeedback" class="copy-feedback" role="status"></span>
+                </div>
+              </div>
+              <pre id="transformedText" class="text-card__body">Run the generator to see obfuscated output.</pre>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

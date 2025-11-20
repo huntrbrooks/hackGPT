@@ -1,0 +1,33 @@
+Create a responsive web application with a clean, modern UI that transforms input text using multiple obfuscation techniques. The app should include:
+
+## Core Features:
+- Large textarea for input with placeholder text
+- "Generate" button that applies all transformations
+- Copy-to-clipboard button
+- Real-time character count
+- Mobile-responsive design
+
+## Transformation Methods:
+1. **Diacritics** - Replace vowels with accented versions (a→ä, e→ë, i→ï, etc.)
+2. **Homoglyphs** - Swap characters with visually similar ones (O→0, l→1, S→5)
+3. **Leet Speak** - Implement l33t substitutions (e→3, a→4, t→7)
+4. **Space Injection** - Randomly add extra spaces between words/characters
+5. **Zero-Width Characters** - Insert U+200B between some characters
+6. **Upside Down Text** - Flip characters using Unicode equivalents
+7. **Emoji Smuggling** - Embed text within emoji variation selectors
+
+## UI Requirements:
+- Clean, dark-themed interface with purple accent color (#8B5CF6)
+- Original vs transformed text comparison view
+- Transformation intensity slider
+- Toggle switches for individual methods
+- Visual feedback on copy operations
+
+## Technical Specs:
+- Vanilla JavaScript (no frameworks)
+- CSS Grid/Flexbox for layout
+- Clipboard API for copy functionality
+- Unicode character mapping for transformations
+- Error handling for empty input
+
+Please implement with modular, reusable functions and ensure the output maintains readability while applying the obfuscation techniques.
