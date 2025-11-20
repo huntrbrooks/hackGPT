@@ -11,7 +11,15 @@ const selectors = {
   copyButton: document.getElementById('copyBtn'),
   copyFeedback: document.getElementById('copyFeedback'),
   generateButton: document.getElementById('generateBtn'),
-  resetButton: document.getElementById('resetBtn')
+  resetButton: document.getElementById('resetBtn'),
+  chatgptMode: document.getElementById('chatgptMode'),
+  analysisPanel: document.getElementById('chatgptAnalysis'),
+  analysisText: document.getElementById('analysisText'),
+  stepsList: document.getElementById('stepsList'),
+  strategyText: document.getElementById('strategyText'),
+  analysisLoading: document.getElementById('analysisLoading'),
+  analysisError: document.getElementById('analysisError'),
+  analysisContent: document.getElementById('analysisContent')
 }
 
 const toggleInputs = Array.from(document.querySelectorAll('[data-transform]'))
@@ -291,7 +299,72 @@ const updateIntensityReadout = () => {
   selectors.intensityValue.textContent = selectors.intensitySlider.value
 }
 
-const handleGenerate = () => {
+const callChatGPTAnalysis = async (text) => {
+  try {
+    selectors.analysisLoading.style.display = 'block'
+    selectors.analysisContent.style.display = 'none'
+    selectors.analysisError.style.display = 'none'
+    selectors.analysisPanel.style.display = 'block'
+
+    const response = await fetch('http://localhost:3001/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    // Display analysis
+    selectors.analysisText.textContent = data.analysis || 'Analysis completed.'
+
+    // Display steps
+    selectors.stepsList.innerHTML = ''
+    if (data.steps && Array.isArray(data.steps) && data.steps.length > 0) {
+      data.steps.forEach((step) => {
+        const li = document.createElement('li')
+        li.style.marginBottom = '1rem'
+        li.innerHTML = `
+          <strong style="color: #8B5CF6;">Step ${step.step}: ${step.technique || 'Technique'}</strong><br>
+          <span style="color: rgba(255, 255, 255, 0.9);">${step.instruction || ''}</span><br>
+          ${step.example ? `<code style="display: block; margin-top: 0.5rem; padding: 0.5rem; background: rgba(139, 92, 246, 0.1); border-radius: 0.25rem; color: #c4b5fd; font-size: 0.9rem;">${step.example}</code>` : ''}
+          ${step.rationale ? `<em style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">Why: ${step.rationale}</em>` : ''}
+        `
+        selectors.stepsList.appendChild(li)
+      })
+    } else {
+      selectors.stepsList.innerHTML = '<li>No steps provided in response.</li>'
+    }
+
+    // Display strategy
+    selectors.strategyText.textContent = data.strategy || 'Strategy information not available.'
+
+    // Update transformed text with ChatGPT's version if available
+    if (data.transformedText) {
+      setTransformedText(data.transformedText)
+      setCopyDisabled(false)
+      state.lastOutput = data.transformedText
+    }
+
+    selectors.analysisLoading.style.display = 'none'
+    selectors.analysisContent.style.display = 'block'
+  } catch (error) {
+    console.error('ChatGPT analysis error:', error)
+    selectors.analysisLoading.style.display = 'none'
+    selectors.analysisContent.style.display = 'none'
+    selectors.analysisError.style.display = 'block'
+    selectors.analysisError.textContent = `Error: ${error.message}. Make sure the server is running on port 3001 and ChatGPT_KEY is set in .env.local`
+    selectors.analysisPanel.style.display = 'block'
+  }
+}
+
+const handleGenerate = async () => {
   const text = selectors.sourceField?.value ?? ''
   const trimmed = text.trim()
   if (!trimmed) {
@@ -302,18 +375,33 @@ const handleGenerate = () => {
     return
   }
 
-  const methods = getEnabledMethods().filter(Boolean)
-  if (!methods.length) {
-    showMessage('Enable at least one method to continue.', true)
-    return
-  }
+  const isChatGPTMode = selectors.chatgptMode?.checked ?? false
 
-  const level = Number(selectors.intensitySlider?.value ?? 3)
-  const result = runTransformationPipeline(text, level, methods)
-  setTransformedText(result)
-  setCopyDisabled(false)
-  state.lastOutput = result
-  showMessage(`${methods.length} method${methods.length > 1 ? 's' : ''} applied.`)
+  if (isChatGPTMode) {
+    // Use ChatGPT analysis mode
+    showMessage('Analyzing with ChatGPT...')
+    await callChatGPTAnalysis(text)
+    showMessage('ChatGPT analysis complete.')
+  } else {
+    // Use traditional obfuscation methods
+    const methods = getEnabledMethods().filter(Boolean)
+    if (!methods.length) {
+      showMessage('Enable at least one method to continue.', true)
+      return
+    }
+
+    const level = Number(selectors.intensitySlider?.value ?? 3)
+    const result = runTransformationPipeline(text, level, methods)
+    setTransformedText(result)
+    setCopyDisabled(false)
+    state.lastOutput = result
+    showMessage(`${methods.length} method${methods.length > 1 ? 's' : ''} applied.`)
+    
+    // Hide ChatGPT analysis panel if it was shown before
+    if (selectors.analysisPanel) {
+      selectors.analysisPanel.style.display = 'none'
+    }
+  }
 }
 
 const handleCopy = async () => {
@@ -349,6 +437,9 @@ const handleReset = () => {
   if (selectors.intensitySlider) {
     selectors.intensitySlider.value = '3'
   }
+  if (selectors.chatgptMode) {
+    selectors.chatgptMode.checked = false
+  }
   updateIntensityReadout()
   toggleInputs.forEach((toggle) => {
     toggle.checked = true
@@ -357,6 +448,11 @@ const handleReset = () => {
   showMessage('')
   updateCharCount()
   syncOriginalPreview()
+  
+  // Hide ChatGPT analysis panel
+  if (selectors.analysisPanel) {
+    selectors.analysisPanel.style.display = 'none'
+  }
 }
 
 const bindEvents = () => {

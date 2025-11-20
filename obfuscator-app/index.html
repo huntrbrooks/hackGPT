@@ -138,6 +138,17 @@
             </label>
           </div>
 
+          <div class="control-block" style="margin-top: 1.5rem;">
+            <label class="toggle" style="display: flex; align-items: center; gap: 0.75rem;">
+              <input type="checkbox" id="chatgptMode" />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">ChatGPT Analysis Mode</span>
+                <span class="toggle-desc">Use AI to analyze and generate bypass strategies</span>
+              </div>
+            </label>
+          </div>
+
           <div class="action-row">
             <button id="generateBtn" type="button" class="primary">
               Generate
@@ -170,6 +181,34 @@
                 </div>
               </div>
               <pre id="transformedText" class="text-card__body">Run the generator to see obfuscated output.</pre>
+            </article>
+          </div>
+
+          <div id="chatgptAnalysis" class="analysis-panel" style="display: none; margin-top: 2rem;">
+            <article class="text-card">
+              <div class="text-card__header">
+                <h3>ChatGPT Analysis & Bypass Strategy</h3>
+              </div>
+              <div class="text-card__body" style="padding: 1.5rem;">
+                <div id="analysisContent">
+                  <p id="analysisText" style="margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.8);"></p>
+                  
+                  <div id="stepsContainer" style="margin-top: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem; color: #8B5CF6; font-size: 1.1rem;">Step-by-Step Bypass Instructions:</h4>
+                    <ol id="stepsList" style="list-style: decimal; padding-left: 1.5rem; line-height: 1.8;">
+                    </ol>
+                  </div>
+
+                  <div id="strategyContainer" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <h4 style="margin-bottom: 0.75rem; color: #8B5CF6; font-size: 1.1rem;">Transformation Strategy:</h4>
+                    <p id="strategyText" style="color: rgba(255, 255, 255, 0.8);"></p>
+                  </div>
+                </div>
+                <div id="analysisLoading" style="display: none; text-align: center; padding: 2rem; color: rgba(255, 255, 255, 0.6);">
+                  Analyzing with ChatGPT...
+                </div>
+                <div id="analysisError" style="display: none; padding: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #fca5a5;"></div>
+              </div>
             </article>
           </div>
         </section>
