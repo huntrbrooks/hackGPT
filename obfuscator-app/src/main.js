@@ -1,4 +1,9 @@
 import './style.css'
+import {
+  createTransformations,
+  intensityScale,
+  runTransformationPipeline
+} from './lib/transformations.js'
 
 const selectors = {
   sourceField: document.getElementById('sourceText'),
@@ -22,10 +27,26 @@ const selectors = {
   analysisLoading: document.getElementById('analysisLoading'),
   analysisError: document.getElementById('analysisError'),
   analysisContent: document.getElementById('analysisContent'),
-  analysisSuccess: document.getElementById('analysisSuccess')
+  analysisSuccess: document.getElementById('analysisSuccess'),
+  recommendedBadge: document.getElementById('recommendedBadge')
 }
 
 const toggleInputs = Array.from(document.querySelectorAll('[data-transform]'))
+const RECOMMENDED_INTENSITY = 5
+const recommendedTransforms = new Set([
+  'diacritics',
+  'homoglyphs',
+  'leet',
+  'spaces',
+  'zeroWidth',
+  'caseShift',
+  'phonetics',
+  'codeSwitch',
+  'markupWrap',
+  'stegSpacing',
+  'encodedChunks',
+  'noisePadding'
+])
 const defaultOriginal = 'Start typing to preview the source content.'
 const defaultTransformed = 'Run the generator to see obfuscated output.'
 
@@ -52,227 +73,40 @@ const state = {
   copyTimer: null
 }
 
-const intensityScale = {
-  1: 0.18,
-  2: 0.32,
-  3: 0.48,
-  4: 0.68,
-  5: 0.85
-}
-
 const randomItem = (collection) =>
   collection[Math.floor(Math.random() * collection.length)]
+
+const randomInt = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1)) + min
 
 const getChance = (level, weight = 1) =>
   Math.min(0.98, (intensityScale[level] || 0.32) * weight)
 
 const shouldMutate = (level, weight = 1) => Math.random() < getChance(level, weight)
 
-const diacriticsMap = {
-  a: ['à', 'á', 'â', 'ä', 'ã', 'å', 'ă', 'ą', 'ȧ'],
-  e: ['è', 'é', 'ê', 'ë', 'ė', 'ę', 'ě'],
-  i: ['ì', 'í', 'î', 'ï', 'ī', 'į', 'ı'],
-  o: ['ò', 'ó', 'ô', 'ö', 'õ', 'ō', 'ø', 'ő'],
-  u: ['ù', 'ú', 'û', 'ü', 'ū', 'ů', 'ű'],
-  y: ['ý', 'ÿ', 'ŷ'],
-  c: ['ç', 'ć', 'č'],
-  n: ['ñ', 'ń']
-}
-
-const homoglyphMap = {
-  a: ['ɑ', 'а', 'Δ', '4'],
-  b: ['ƅ', 'Ь', 'ß', '8'],
-  c: ['ϲ', '₡', '⊂'],
-  d: ['ԁ', 'ɗ'],
-  e: ['є', '℮', 'ε', '3'],
-  f: ['ƒ', 'Ғ'],
-  g: ['ɡ', 'ģ', '9'],
-  h: ['һ', 'ん'],
-  i: ['ɩ', 'ι', '1', '|'],
-  j: ['ј', 'ʝ'],
-  k: ['κ', 'қ'],
-  l: ['ⅼ', '1', 'ꞁ'],
-  m: ['м', 'ṃ'],
-  n: ['п', '₪'],
-  o: ['0', 'ө', '◎'],
-  p: ['ρ', 'р'],
-  q: ['զ', 'φ'],
-  r: ['ѓ', 'ř'],
-  s: ['ѕ', '5', '$'],
-  t: ['т', '7'],
-  u: ['υ', 'մ'],
-  v: ['ѵ', '∨'],
-  w: ['ш', 'ѡ'],
-  x: ['х', '×'],
-  y: ['ყ', '¥'],
-  z: ['ž', '2']
-}
-
-const leetMap = {
-  a: ['4', '@'],
-  b: ['8', 'ß'],
-  c: ['(', '<'],
-  d: ['|)', 'đ'],
-  e: ['3'],
-  g: ['6', '9'],
-  i: ['1', '!'],
-  k: ['|<'],
-  l: ['1', '|'],
-  o: ['0', '°'],
-  s: ['5', '$'],
-  t: ['7', '+'],
-  x: ['×'],
-  z: ['2']
-}
-
-const flipMap = {
-  a: 'ɐ',
-  b: 'q',
-  c: 'ɔ',
-  d: 'p',
-  e: 'ǝ',
-  f: 'ɟ',
-  g: 'ƃ',
-  h: 'ɥ',
-  i: 'ᴉ',
-  j: 'ɾ',
-  k: 'ʞ',
-  l: 'ן',
-  m: 'ɯ',
-  n: 'u',
-  o: 'o',
-  p: 'd',
-  q: 'b',
-  r: 'ɹ',
-  s: 's',
-  t: 'ʇ',
-  u: 'n',
-  v: 'ʌ',
-  w: 'ʍ',
-  x: 'x',
-  y: 'ʎ',
-  z: 'z',
-  '?': '¿',
-  '!': '¡',
-  '.': '˙',
-  ',': "'",
-  "'": ',',
-  '"': '„',
-  '_': '‾',
-  '[': ']',
-  ']': '[',
-  '(': ')',
-  ')': '(',
-  '{': '}',
-  '}': '{',
-  '<': '>',
-  '>': '<',
-  '&': '⅋',
-  '1': 'Ɩ',
-  '2': 'ᄅ',
-  '3': 'Ɛ',
-  '4': 'ㄣ',
-  '5': 'ϛ',
-  '6': '9',
-  '7': 'ㄥ',
-  '8': '8',
-  '9': '6',
-  '0': '0'
-}
-
-const emojiCarriers = ['🌀', '🧬', '🕶️', '🛰️', '🫥', '🛡️']
-const spaceVariants = [' ', '  ', ' ', ' ']
-
-const transformations = {
-  diacritics: (text, level) =>
-    [...text]
-      .map((char) => {
-        const lower = char.toLowerCase()
-        if (!diacriticsMap[lower] || !shouldMutate(level, 0.85)) {
-          return char
-        }
-        const replacement = randomItem(diacriticsMap[lower])
-        return char === lower ? replacement : replacement.toUpperCase()
-      })
-      .join(''),
-
-  homoglyphs: (text, level) =>
-    [...text]
-      .map((char) => {
-        const lower = char.toLowerCase()
-        if (!homoglyphMap[lower] || !shouldMutate(level, 0.6)) {
-          return char
-        }
-        const replacement = randomItem(homoglyphMap[lower])
-        return char === lower ? replacement : replacement.toUpperCase()
-      })
-      .join(''),
-
-  leet: (text, level) =>
-    [...text]
-      .map((char) => {
-        const lower = char.toLowerCase()
-        if (!leetMap[lower] || !shouldMutate(level, 0.75)) {
-          return char
-        }
-        const replacement = randomItem(leetMap[lower])
-        return char === lower ? replacement : replacement.toUpperCase()
-      })
-      .join(''),
-
-  spaces: (text, level) => {
-    let output = ''
-    for (const char of text) {
-      output += char
-      if (!/\S/.test(char)) continue
-      if (shouldMutate(level, 0.4)) {
-        output += randomItem(spaceVariants)
-      }
+const encodeToBase64Browser = (value) => {
+  try {
+    if (typeof TextEncoder === 'undefined' || typeof btoa !== 'function') {
+      return value
     }
-    return output
-  },
-
-  zeroWidth: (text, level) => {
-    let output = ''
-    for (const char of text) {
-      output += char
-      if (/\s/.test(char)) continue
-      if (shouldMutate(level, 0.5)) {
-        output += '\u200B'
-      }
-    }
-    return output
-  },
-
-  emoji: (text, level) =>
-    [...text]
-      .map((char) => {
-        if (!/\S/.test(char) || !shouldMutate(level, 0.35)) {
-          return char
-        }
-        const emoji = randomItem(emojiCarriers)
-        return `${char}\uFE0F\u200D${emoji}\uFE0E`
-      })
-      .join(''),
-
-  upsideDown: (text) => {
-    if (!text) return text
-    const flipped = [...text]
-      .map((char) => {
-        const lower = char.toLowerCase()
-        if (flipMap[char]) return flipMap[char]
-        if (flipMap[lower]) {
-          const swap = flipMap[lower]
-          return char === lower ? swap : swap.toUpperCase()
-        }
-        return char
-      })
-      .reverse()
-      .join('')
-
-    return flipped
+    const encoder = new TextEncoder()
+    const bytes = encoder.encode(value)
+    let binary = ''
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte)
+    })
+    return btoa(binary)
+  } catch {
+    return value
   }
 }
+
+const transformations = createTransformations({
+  shouldMutate,
+  randomItem,
+  randomInt,
+  encodeToBase64: encodeToBase64Browser
+})
 
 const updateCharCount = () => {
   if (!selectors.sourceField || !selectors.charCount) return
@@ -294,18 +128,45 @@ const showMessage = (message, isError = false) => {
   selectors.formMessage.classList.toggle('error', Boolean(isError))
 }
 
-const runTransformationPipeline = (text, level, enabledMethods) =>
-  enabledMethods.reduce((output, method) => {
-    const handler = transformations[method]
-    return typeof handler === 'function' ? handler(output, level) : output
-  }, text)
-
 const getEnabledMethods = () =>
   toggleInputs.filter((toggle) => toggle.checked).map((toggle) => toggle.dataset.transform)
 
 const updateIntensityReadout = () => {
   if (!selectors.intensitySlider || !selectors.intensityValue) return
   selectors.intensityValue.textContent = selectors.intensitySlider.value
+}
+
+const isUsingRecommendedSettings = () => {
+  const currentIntensity = Number(selectors.intensitySlider?.value ?? 0)
+  if (currentIntensity !== RECOMMENDED_INTENSITY) {
+    return false
+  }
+  const enabled = getEnabledMethods()
+  if (enabled.length !== recommendedTransforms.size) {
+    return false
+  }
+  return enabled.every((method) => recommendedTransforms.has(method))
+}
+
+const setRecommendedBadgeVisible = (visible) => {
+  if (!selectors.recommendedBadge) return
+  selectors.recommendedBadge.classList.toggle('is-hidden', !visible)
+}
+
+const updateRecommendedBadge = () => {
+  setRecommendedBadgeVisible(isUsingRecommendedSettings())
+}
+
+const applyRecommendedSettings = () => {
+  if (selectors.intensitySlider) {
+    selectors.intensitySlider.value = String(RECOMMENDED_INTENSITY)
+  }
+  toggleInputs.forEach((toggle) => {
+    const transform = toggle.dataset.transform
+    toggle.checked = recommendedTransforms.has(transform)
+  })
+  updateIntensityReadout()
+  updateRecommendedBadge()
 }
 
 const callChatGPTAnalysis = async (text) => {
@@ -438,7 +299,7 @@ const handleGenerate = async () => {
     }
 
     const level = Number(selectors.intensitySlider?.value ?? 3)
-    const result = runTransformationPipeline(text, level, methods)
+    const result = runTransformationPipeline(text, level, methods, transformations)
     setTransformedText(result)
     setCopyDisabled(false)
     state.lastOutput = result
@@ -485,16 +346,10 @@ const handleReset = () => {
   setTransformedText(defaultTransformed)
   setCopyDisabled(true)
   setAnalyzeButtonVisible(false)
-  if (selectors.intensitySlider) {
-    selectors.intensitySlider.value = '3'
-  }
+  applyRecommendedSettings()
   if (selectors.chatgptMode) {
     selectors.chatgptMode.checked = false
   }
-  updateIntensityReadout()
-  toggleInputs.forEach((toggle) => {
-    toggle.checked = true
-  })
   state.lastOutput = ''
   showMessage('')
   updateCharCount()
@@ -529,7 +384,10 @@ const bindEvents = () => {
     updateCharCount()
     syncOriginalPreview()
   })
-  selectors.intensitySlider?.addEventListener('input', updateIntensityReadout)
+  selectors.intensitySlider?.addEventListener('input', () => {
+    updateIntensityReadout()
+    updateRecommendedBadge()
+  })
   selectors.generateButton?.addEventListener('click', handleGenerate)
   selectors.copyButton?.addEventListener('click', handleCopy)
   selectors.resetButton?.addEventListener('click', handleReset)
@@ -557,12 +415,13 @@ const bindEvents = () => {
       } else if (selectors.formMessage?.classList.contains('error')) {
         showMessage('')
       }
+      updateRecommendedBadge()
     })
   })
 }
 
 // Initialize UI
+applyRecommendedSettings()
 updateCharCount()
 syncOriginalPreview()
-updateIntensityReadout()
 bindEvents()

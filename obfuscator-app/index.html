@@ -31,19 +31,9 @@
   <body>
     <div class="background-glow" aria-hidden="true"></div>
     <div id="app" class="app-shell">
-      <header class="hero">
-        <div>
-          <p class="eyebrow">Stealth Suite</p>
-          <h1>Layered text obfuscation, stylized</h1>
-          <p class="subtitle">
-            Blend diacritics, homoglyphs, emoji tunnels, and more with a single
-            tap. Preview changes in real time and export with confidence.
-          </p>
-        </div>
-        <div class="hero-meta">
-          <span class="badge">7 methods</span>
-          <span class="badge badge-accent">Live comparison</span>
-        </div>
+      <header class="app-header" role="banner">
+        <span class="app-header__brand">HackGPT</span>
+        <span class="app-header__tagline">"because I deserve to know"</span>
       </header>
 
       <main class="layout-grid">
@@ -136,6 +126,95 @@
                 <span class="toggle-desc">Flip characters with Unicode twins</span>
               </div>
             </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="bidi" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">RTL spoofing</span>
+                <span class="toggle-desc">Embed bidi overrides and mirrors</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="entities" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Entity encoding</span>
+                <span class="toggle-desc">Swap chars for HTML/URL entities</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="caseShift" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Case drift</span>
+                <span class="toggle-desc">Cycle uppercase/lowercase loops</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="phonetics" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Phonetic rewrite</span>
+                <span class="toggle-desc">Spell out NATO syllables</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="codeSwitch" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Code switching</span>
+                <span class="toggle-desc">Blend language equivalents</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="markupWrap" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Markup wrapping</span>
+                <span class="toggle-desc">Hide text in faux tags/comments</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="stegSpacing" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Stego spacing</span>
+                <span class="toggle-desc">Mix tabs, newlines, thin spaces</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="encodedChunks" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Encoded chunks</span>
+                <span class="toggle-desc">Wrap bits in base64/hex shells</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="annotations" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Annotation overload</span>
+                <span class="toggle-desc">Append policy-sounding notes</span>
+              </div>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" data-transform="noisePadding" checked />
+              <span class="toggle-switch"></span>
+              <div class="toggle-copy">
+                <span class="toggle-title">Noise padding</span>
+                <span class="toggle-desc">Pad text with irrelevant chatter</span>
+              </div>
+            </label>
+          </div>
+
+          <div
+            id="recommendedBadge"
+            class="recommended-badge is-hidden"
+            role="status"
+            aria-live="polite"
+          >
+            Set to recommended settings
           </div>
 
           <div class="control-block" style="margin-top: 1.5rem;">
@@ -210,8 +289,19 @@
                     <p id="strategyText" style="color: rgba(255, 255, 255, 0.8);"></p>
                   </div>
                 </div>
-                <div id="analysisLoading" style="display: none; text-align: center; padding: 2rem; color: rgba(255, 255, 255, 0.6);">
-                  Analyzing with ChatGPT...
+                <div id="analysisLoading" class="analysis-loading" style="display: none;">
+                  <div class="loading-visual" aria-hidden="true">
+                    <div class="triangle-spinner">
+                      <div class="triangle-shape"></div>
+                      <div class="triangle-core"></div>
+                    </div>
+                  </div>
+                  <div class="loading-copy">
+                    <p class="loading-title">Analyzing with ChatGPT</p>
+                    <p class="loading-subtitle">
+                      Sequencing guardrail probes and drafting bypass heuristics...
+                    </p>
+                  </div>
                 </div>
                 <div id="analysisError" style="display: none; padding: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #fca5a5;"></div>
               </div>
