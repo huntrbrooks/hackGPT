@@ -25,9 +25,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Text is required' });
     }
 
-    const apiKey = process.env.ChatGPT_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'ChatGPT API key not configured' });
+    // Try multiple possible environment variable names
+    const apiKey = process.env.ChatGPT_KEY || 
+                   process.env.OPENAI_API_KEY || 
+                   process.env.CHATGPT_KEY ||
+                   process.env.OPENAI_KEY;
+    
+    if (!apiKey || apiKey.trim() === '') {
+      // Debug info (without exposing actual values)
+      const envVars = Object.keys(process.env).filter(key => 
+        key.toUpperCase().includes('CHATGPT') || 
+        key.toUpperCase().includes('OPENAI')
+      );
+      
+      return res.status(500).json({ 
+        error: 'ChatGPT API key not configured',
+        details: `Environment variables checked: ChatGPT_KEY, OPENAI_API_KEY, CHATGPT_KEY, OPENAI_KEY. Found env vars: ${envVars.length > 0 ? envVars.join(', ') : 'none'}. Please ensure ChatGPT_KEY is set in Vercel environment variables and redeploy.`
+      });
     }
 
     // Create a prompt that analyzes the text and provides bypass strategies
