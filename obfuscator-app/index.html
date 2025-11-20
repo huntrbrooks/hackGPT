@@ -174,6 +174,9 @@
               <div class="text-card__header">
                 <h3>Transformed</h3>
                 <div class="copy-cluster">
+                  <button id="analyzeOutputBtn" type="button" class="ghost" style="display: none;">
+                    Analyze
+                  </button>
                   <button id="copyBtn" type="button" class="ghost" disabled>
                     Copy
                   </button>
@@ -185,11 +188,14 @@
           </div>
 
           <div id="chatgptAnalysis" class="analysis-panel" style="display: none; margin-top: 2rem;">
-            <article class="text-card">
+            <article class="text-card" id="analysisCard">
               <div class="text-card__header">
                 <h3>ChatGPT Analysis & Bypass Strategy</h3>
               </div>
               <div class="text-card__body" style="padding: 1.5rem;">
+                <div id="analysisSuccess" style="display: none; text-align: center; padding: 1.5rem; margin-bottom: 1.5rem; background: rgba(34, 197, 94, 0.15); border: 2px solid rgba(34, 197, 94, 0.5); border-radius: 0.75rem; color: #86efac; font-weight: 600; font-size: 1.1rem; letter-spacing: 0.05em;">
+                  BYPASS SUCCESSFUL
+                </div>
                 <div id="analysisContent">
                   <p id="analysisText" style="margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.8);"></p>
                   

@@ -487,11 +487,40 @@ button:focus-visible {
   }
 }
 
+.analysis-panel .text-card.bypass-success {
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.4),
+              0 20px 60px rgba(34, 197, 94, 0.2),
+              inset 0 0 20px rgba(34, 197, 94, 0.1);
+  background: linear-gradient(145deg, 
+    rgba(17, 15, 32, 0.95), 
+    rgba(17, 8, 33, 0.8),
+    rgba(34, 197, 94, 0.05));
+  animation: greenGlow 2s ease-in-out infinite;
+}
+
+@keyframes greenGlow {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.4),
+                0 20px 60px rgba(34, 197, 94, 0.2),
+                inset 0 0 20px rgba(34, 197, 94, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(34, 197, 94, 0.6),
+                0 20px 80px rgba(34, 197, 94, 0.4),
+                inset 0 0 30px rgba(34, 197, 94, 0.15);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     transition: none !important;
     animation: none !important;
+  }
+  
+  .analysis-panel .text-card.bypass-success {
+    animation: none;
   }
 }

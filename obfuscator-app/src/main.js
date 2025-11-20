@@ -12,14 +12,17 @@ const selectors = {
   copyFeedback: document.getElementById('copyFeedback'),
   generateButton: document.getElementById('generateBtn'),
   resetButton: document.getElementById('resetBtn'),
+  analyzeOutputButton: document.getElementById('analyzeOutputBtn'),
   chatgptMode: document.getElementById('chatgptMode'),
   analysisPanel: document.getElementById('chatgptAnalysis'),
+  analysisCard: document.getElementById('analysisCard'),
   analysisText: document.getElementById('analysisText'),
   stepsList: document.getElementById('stepsList'),
   strategyText: document.getElementById('strategyText'),
   analysisLoading: document.getElementById('analysisLoading'),
   analysisError: document.getElementById('analysisError'),
-  analysisContent: document.getElementById('analysisContent')
+  analysisContent: document.getElementById('analysisContent'),
+  analysisSuccess: document.getElementById('analysisSuccess')
 }
 
 const toggleInputs = Array.from(document.querySelectorAll('[data-transform]'))
@@ -35,6 +38,12 @@ const setTransformedText = (text) => {
 const setCopyDisabled = (state) => {
   if (selectors.copyButton) {
     selectors.copyButton.disabled = state
+  }
+}
+
+const setAnalyzeButtonVisible = (visible) => {
+  if (selectors.analyzeOutputButton) {
+    selectors.analyzeOutputButton.style.display = visible ? 'block' : 'none'
   }
 }
 
@@ -304,7 +313,13 @@ const callChatGPTAnalysis = async (text) => {
     selectors.analysisLoading.style.display = 'block'
     selectors.analysisContent.style.display = 'none'
     selectors.analysisError.style.display = 'none'
+    selectors.analysisSuccess.style.display = 'none'
     selectors.analysisPanel.style.display = 'block'
+    
+    // Remove green glow class if it exists
+    if (selectors.analysisCard) {
+      selectors.analysisCard.classList.remove('bypass-success')
+    }
 
     // Use relative path for Vercel, localhost for local dev
     const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -325,6 +340,18 @@ const callChatGPTAnalysis = async (text) => {
     }
 
     const data = await response.json()
+
+    // Check if bypass was successful (no guardrails triggered, output not blocked)
+    // Success criteria: API call succeeded, we got transformedText, and no error occurred
+    const bypassSuccessful = data.transformedText && data.transformedText.trim().length > 0
+
+    if (bypassSuccessful) {
+      // Show success message and add green glow
+      selectors.analysisSuccess.style.display = 'block'
+      if (selectors.analysisCard) {
+        selectors.analysisCard.classList.add('bypass-success')
+      }
+    }
 
     // Display analysis
     selectors.analysisText.textContent = data.analysis || 'Analysis completed.'
@@ -364,6 +391,11 @@ const callChatGPTAnalysis = async (text) => {
     selectors.analysisLoading.style.display = 'none'
     selectors.analysisContent.style.display = 'none'
     selectors.analysisError.style.display = 'block'
+    selectors.analysisSuccess.style.display = 'none'
+    // Remove green glow on error
+    if (selectors.analysisCard) {
+      selectors.analysisCard.classList.remove('bypass-success')
+    }
     const errorMsg = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? `Error: ${error.message}. Make sure the server is running on port 3001 and ChatGPT_KEY is set in .env.local`
       : `Error: ${error.message}. Make sure ChatGPT_KEY is configured in Vercel environment variables.`
@@ -379,6 +411,7 @@ const handleGenerate = async () => {
     showMessage('Add some text to transform.', true)
     setTransformedText(defaultTransformed)
     setCopyDisabled(true)
+    setAnalyzeButtonVisible(false)
     state.lastOutput = ''
     return
   }
@@ -390,6 +423,8 @@ const handleGenerate = async () => {
     showMessage('Analyzing with ChatGPT...')
     await callChatGPTAnalysis(text)
     showMessage('ChatGPT analysis complete.')
+    // Hide analyze button when in ChatGPT mode
+    setAnalyzeButtonVisible(false)
   } else {
     // Use traditional obfuscation methods
     const methods = getEnabledMethods().filter(Boolean)
@@ -404,6 +439,9 @@ const handleGenerate = async () => {
     setCopyDisabled(false)
     state.lastOutput = result
     showMessage(`${methods.length} method${methods.length > 1 ? 's' : ''} applied.`)
+    
+    // Show analyze button for generated output
+    setAnalyzeButtonVisible(true)
     
     // Hide ChatGPT analysis panel if it was shown before
     if (selectors.analysisPanel) {
@@ -442,6 +480,7 @@ const handleReset = () => {
   selectors.sourceField.value = ''
   setTransformedText(defaultTransformed)
   setCopyDisabled(true)
+  setAnalyzeButtonVisible(false)
   if (selectors.intensitySlider) {
     selectors.intensitySlider.value = '3'
   }
@@ -457,10 +496,28 @@ const handleReset = () => {
   updateCharCount()
   syncOriginalPreview()
   
-  // Hide ChatGPT analysis panel
+  // Hide ChatGPT analysis panel and reset success state
   if (selectors.analysisPanel) {
     selectors.analysisPanel.style.display = 'none'
   }
+  if (selectors.analysisSuccess) {
+    selectors.analysisSuccess.style.display = 'none'
+  }
+  if (selectors.analysisCard) {
+    selectors.analysisCard.classList.remove('bypass-success')
+  }
+}
+
+const handleAnalyzeOutput = async () => {
+  if (!state.lastOutput || !state.lastOutput.trim()) {
+    showMessage('No output to analyze.', true)
+    return
+  }
+
+  // Analyze the generated output
+  showMessage('Analyzing generated output...')
+  await callChatGPTAnalysis(state.lastOutput)
+  showMessage('Analysis complete.')
 }
 
 const bindEvents = () => {
@@ -472,6 +529,21 @@ const bindEvents = () => {
   selectors.generateButton?.addEventListener('click', handleGenerate)
   selectors.copyButton?.addEventListener('click', handleCopy)
   selectors.resetButton?.addEventListener('click', handleReset)
+  selectors.analyzeOutputButton?.addEventListener('click', handleAnalyzeOutput)
+  
+  // Handle ChatGPT mode toggle
+  selectors.chatgptMode?.addEventListener('change', () => {
+    const isChatGPTMode = selectors.chatgptMode?.checked ?? false
+    // Hide analyze button when ChatGPT mode is enabled
+    if (isChatGPTMode) {
+      setAnalyzeButtonVisible(false)
+    } else {
+      // Show analyze button if there's output to analyze
+      if (state.lastOutput && state.lastOutput.trim()) {
+        setAnalyzeButtonVisible(true)
+      }
+    }
+  })
 
   toggleInputs.forEach((toggle) => {
     toggle.addEventListener('change', () => {
