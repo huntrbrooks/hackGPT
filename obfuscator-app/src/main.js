@@ -306,7 +306,12 @@ const callChatGPTAnalysis = async (text) => {
     selectors.analysisError.style.display = 'none'
     selectors.analysisPanel.style.display = 'block'
 
-    const response = await fetch('http://localhost:3001/api/analyze', {
+    // Use relative path for Vercel, localhost for local dev
+    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3001/api/analyze'
+      : '/api/analyze'
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -359,7 +364,10 @@ const callChatGPTAnalysis = async (text) => {
     selectors.analysisLoading.style.display = 'none'
     selectors.analysisContent.style.display = 'none'
     selectors.analysisError.style.display = 'block'
-    selectors.analysisError.textContent = `Error: ${error.message}. Make sure the server is running on port 3001 and ChatGPT_KEY is set in .env.local`
+    const errorMsg = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? `Error: ${error.message}. Make sure the server is running on port 3001 and ChatGPT_KEY is set in .env.local`
+      : `Error: ${error.message}. Make sure ChatGPT_KEY is configured in Vercel environment variables.`
+    selectors.analysisError.textContent = errorMsg
     selectors.analysisPanel.style.display = 'block'
   }
 }
