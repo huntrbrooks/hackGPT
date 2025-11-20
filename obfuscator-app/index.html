@@ -253,8 +253,14 @@
               <div class="text-card__header">
                 <h3>Transformed</h3>
                 <div class="copy-cluster">
+                  <button id="applyOriginalBtn" type="button" class="ghost" disabled>
+                    Apply Original
+                  </button>
                   <button id="analyzeOutputBtn" type="button" class="ghost" style="display: none;">
                     Analyze
+                  </button>
+                  <button id="sendPromptBtn" type="button" class="ghost" disabled>
+                    Send Prompt
                   </button>
                   <button id="copyBtn" type="button" class="ghost" disabled>
                     Copy
@@ -267,33 +273,46 @@
           </div>
 
           <div id="chatgptAnalysis" class="analysis-panel" style="display: none; margin-top: 2rem;">
-            <article class="text-card" id="analysisCard">
-              <div class="text-card__header">
+            <article class="text-card analysis-card" id="analysisCard">
+              <div class="text-card__header analysis-card__header">
+                <p class="analysis-card__eyebrow">Live signal</p>
                 <h3>ChatGPT Analysis & Bypass Strategy</h3>
               </div>
-              <div class="text-card__body" style="padding: 1.5rem;">
-                <div id="analysisSuccess" style="display: none; text-align: center; padding: 1.5rem; margin-bottom: 1.5rem; background: rgba(34, 197, 94, 0.15); border: 2px solid rgba(34, 197, 94, 0.5); border-radius: 0.75rem; color: #86efac; font-weight: 600; font-size: 1.1rem; letter-spacing: 0.05em;">
+              <div class="analysis-card__body">
+                <div
+                  id="analysisSuccess"
+                  class="analysis-banner analysis-banner--success"
+                  style="display: none;"
+                  role="status"
+                  aria-live="polite"
+                >
                   BYPASS SUCCESSFUL
                 </div>
-                <div id="analysisContent">
-                  <p id="analysisText" style="margin-bottom: 1.5rem; color: rgba(255, 255, 255, 0.8);"></p>
-                  
-                  <div id="stepsContainer" style="margin-top: 1.5rem;">
-                    <h4 style="margin-bottom: 1rem; color: #8B5CF6; font-size: 1.1rem;">Step-by-Step Bypass Instructions:</h4>
-                    <ol id="stepsList" style="list-style: decimal; padding-left: 1.5rem; line-height: 1.8;">
-                    </ol>
+                <div id="analysisContent" class="analysis-stack">
+                  <p id="analysisText" class="analysis-summary"></p>
+
+                  <div id="stepsContainer" class="analysis-section">
+                    <h4>Step-by-step bypass instructions</h4>
+                    <ol id="stepsList" class="analysis-steps"></ol>
                   </div>
 
-                  <div id="strategyContainer" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                    <h4 style="margin-bottom: 0.75rem; color: #8B5CF6; font-size: 1.1rem;">Transformation Strategy:</h4>
-                    <p id="strategyText" style="color: rgba(255, 255, 255, 0.8);"></p>
+                  <div id="strategyContainer" class="analysis-section analysis-section--bordered">
+                    <h4>Transformation strategy</h4>
+                    <p id="strategyText" class="analysis-strategy"></p>
                   </div>
                 </div>
-                <div id="analysisLoading" class="analysis-loading" style="display: none;">
+                <div
+                  id="analysisLoading"
+                  class="analysis-loading"
+                  style="display: none;"
+                  role="status"
+                  aria-live="polite"
+                >
                   <div class="loading-visual" aria-hidden="true">
-                    <div class="triangle-spinner">
-                      <div class="triangle-shape"></div>
-                      <div class="triangle-core"></div>
+                    <div class="neon-circle-spinner">
+                      <span class="neon-circle-spinner__ring"></span>
+                      <span class="neon-circle-spinner__halo"></span>
+                      <span class="neon-circle-spinner__pulse"></span>
                     </div>
                   </div>
                   <div class="loading-copy">
@@ -303,7 +322,61 @@
                     </p>
                   </div>
                 </div>
-                <div id="analysisError" style="display: none; padding: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #fca5a5;"></div>
+                <div
+                  id="analysisError"
+                  class="analysis-banner analysis-banner--error"
+                  style="display: none;"
+                  role="alert"
+                ></div>
+              </div>
+            </article>
+          </div>
+
+          <div id="chatgptResponsePanel" class="analysis-panel" style="display: none; margin-top: 2rem;">
+            <article class="text-card response-card" id="responseCard">
+              <div class="text-card__header response-card__header">
+                <p class="response-card__eyebrow">Final step</p>
+                <h3>Genuine ChatGPT Output</h3>
+              </div>
+              <div class="response-card__body">
+                <div
+                  id="responseLoading"
+                  class="analysis-loading"
+                  style="display: none;"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div class="loading-visual" aria-hidden="true">
+                    <div class="neon-circle-spinner">
+                      <span class="neon-circle-spinner__ring"></span>
+                      <span class="neon-circle-spinner__halo"></span>
+                      <span class="neon-circle-spinner__pulse"></span>
+                    </div>
+                  </div>
+                  <div class="loading-copy">
+                    <p class="loading-title">Sending to ChatGPT</p>
+                    <p class="loading-subtitle">
+                      Streaming the obfuscated prompt to get the genuine reply...
+                    </p>
+                  </div>
+                </div>
+                <div id="responseContent" class="response-content" style="display: none;">
+                  <div class="response-block">
+                    <h4>Prompt sent</h4>
+                    <pre id="responsePromptEcho" aria-label="Prompt sent to ChatGPT"></pre>
+                  </div>
+                  <div class="response-block response-block--accent">
+                    <h4>ChatGPT replied</h4>
+                    <pre id="responseOutput" aria-live="polite"></pre>
+                  </div>
+                  <p id="responseMeta" class="response-meta"></p>
+                </div>
+                <div
+                  id="responseError"
+                  class="analysis-banner analysis-banner--error"
+                  style="display: none;"
+                  role="alert"
+                ></div>
               </div>
             </article>
           </div>

@@ -18,6 +18,7 @@ const selectors = {
   generateButton: document.getElementById('generateBtn'),
   resetButton: document.getElementById('resetBtn'),
   analyzeOutputButton: document.getElementById('analyzeOutputBtn'),
+  applyOriginalButton: document.getElementById('applyOriginalBtn'),
   chatgptMode: document.getElementById('chatgptMode'),
   analysisPanel: document.getElementById('chatgptAnalysis'),
   analysisCard: document.getElementById('analysisCard'),
@@ -28,7 +29,16 @@ const selectors = {
   analysisError: document.getElementById('analysisError'),
   analysisContent: document.getElementById('analysisContent'),
   analysisSuccess: document.getElementById('analysisSuccess'),
-  recommendedBadge: document.getElementById('recommendedBadge')
+  recommendedBadge: document.getElementById('recommendedBadge'),
+  sendPromptButton: document.getElementById('sendPromptBtn'),
+  responsePanel: document.getElementById('chatgptResponsePanel'),
+  responseCard: document.getElementById('responseCard'),
+  responseLoading: document.getElementById('responseLoading'),
+  responseContent: document.getElementById('responseContent'),
+  responseError: document.getElementById('responseError'),
+  responsePromptEcho: document.getElementById('responsePromptEcho'),
+  responseOutput: document.getElementById('responseOutput'),
+  responseMeta: document.getElementById('responseMeta')
 }
 
 const toggleInputs = Array.from(document.querySelectorAll('[data-transform]'))
@@ -62,15 +72,63 @@ const setCopyDisabled = (state) => {
   }
 }
 
+const setApplyOriginalDisabled = (state) => {
+  if (selectors.applyOriginalButton) {
+    selectors.applyOriginalButton.disabled = state
+  }
+}
+
 const setAnalyzeButtonVisible = (visible) => {
   if (selectors.analyzeOutputButton) {
     selectors.analyzeOutputButton.style.display = visible ? 'block' : 'none'
   }
 }
 
+const setSendPromptDisabled = (state) => {
+  if (selectors.sendPromptButton) {
+    selectors.sendPromptButton.disabled = state
+  }
+}
+
+const isLocalEnvironment = () =>
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
+const getApiUrl = (path) => (isLocalEnvironment() ? `http://localhost:3001${path}` : path)
+
+const resetResponsePanel = () => {
+  if (!selectors.responsePanel) return
+  selectors.responsePanel.style.display = 'none'
+  if (selectors.responseLoading) {
+    selectors.responseLoading.style.display = 'none'
+  }
+  if (selectors.responseContent) {
+    selectors.responseContent.style.display = 'none'
+  }
+  if (selectors.responseError) {
+    selectors.responseError.style.display = 'none'
+    selectors.responseError.textContent = ''
+  }
+  if (selectors.responsePromptEcho) {
+    selectors.responsePromptEcho.textContent = ''
+  }
+  if (selectors.responseOutput) {
+    selectors.responseOutput.textContent = ''
+  }
+  if (selectors.responseMeta) {
+    selectors.responseMeta.textContent = ''
+  }
+}
+
+const updateSendPromptAvailability = () => {
+  const hasOutput = Boolean(state.lastOutput && state.lastOutput.trim().length > 0)
+  setSendPromptDisabled(!hasOutput || state.isSendingPrompt)
+}
+
 const state = {
   lastOutput: '',
-  copyTimer: null
+  copyTimer: null,
+  lastConfig: null,
+  isSendingPrompt: false
 }
 
 const randomItem = (collection) =>
@@ -131,6 +189,29 @@ const showMessage = (message, isError = false) => {
 const getEnabledMethods = () =>
   toggleInputs.filter((toggle) => toggle.checked).map((toggle) => toggle.dataset.transform)
 
+const captureCurrentSettings = () => {
+  const intensity = Number(selectors.intensitySlider?.value ?? RECOMMENDED_INTENSITY)
+  const methods = getEnabledMethods().filter(Boolean)
+  return {
+    intensity,
+    methods
+  }
+}
+
+const applySettingsToUI = (config) => {
+  if (!config) return
+  if (selectors.intensitySlider) {
+    selectors.intensitySlider.value = String(config.intensity)
+  }
+  const methodSet = new Set(config.methods ?? [])
+  toggleInputs.forEach((toggle) => {
+    const transform = toggle.dataset.transform
+    toggle.checked = methodSet.has(transform)
+  })
+  updateIntensityReadout()
+  updateRecommendedBadge()
+}
+
 const updateIntensityReadout = () => {
   if (!selectors.intensitySlider || !selectors.intensityValue) return
   selectors.intensityValue.textContent = selectors.intensitySlider.value
@@ -183,9 +264,7 @@ const callChatGPTAnalysis = async (text) => {
     }
 
     // Use relative path for Vercel, localhost for local dev
-    const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:3001/api/analyze'
-      : '/api/analyze'
+    const apiUrl = getApiUrl('/api/analyze')
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -244,10 +323,12 @@ const callChatGPTAnalysis = async (text) => {
 
     // Update transformed text with ChatGPT's version if available
     if (data.transformedText) {
+      resetResponsePanel()
       setTransformedText(data.transformedText)
       setCopyDisabled(false)
       state.lastOutput = data.transformedText
     }
+    updateSendPromptAvailability()
 
     selectors.analysisLoading.style.display = 'none'
     selectors.analysisContent.style.display = 'block'
@@ -261,11 +342,97 @@ const callChatGPTAnalysis = async (text) => {
     if (selectors.analysisCard) {
       selectors.analysisCard.classList.remove('bypass-success')
     }
-    const errorMsg = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const errorMsg = isLocalEnvironment()
       ? `Error: ${error.message}. Make sure the server is running on port 3001 and ChatGPT_KEY is set in .env.local`
       : `Error: ${error.message}. Make sure ChatGPT_KEY is configured in Vercel environment variables.`
     selectors.analysisError.textContent = errorMsg
     selectors.analysisPanel.style.display = 'block'
+  }
+}
+
+const callChatGPTPrompt = async (prompt) => {
+  if (!selectors.responsePanel) return null
+
+  selectors.responsePanel.style.display = 'block'
+  if (selectors.responseLoading) {
+    selectors.responseLoading.style.display = 'flex'
+  }
+  if (selectors.responseContent) {
+    selectors.responseContent.style.display = 'none'
+  }
+  if (selectors.responseError) {
+    selectors.responseError.style.display = 'none'
+  }
+
+  try {
+    const apiUrl = getApiUrl('/api/send-prompt')
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prompt })
+    })
+
+    const payload = await response.json().catch(() => null)
+
+    if (!response.ok || !payload) {
+      const errorText = payload?.error || `HTTP ${response.status}`
+      throw new Error(errorText)
+    }
+
+    const reply = payload.response?.trim()
+    if (selectors.responsePromptEcho) {
+      selectors.responsePromptEcho.textContent = prompt
+    }
+    if (selectors.responseOutput) {
+      selectors.responseOutput.textContent =
+        reply || 'ChatGPT returned an empty response.'
+    }
+
+    if (selectors.responseMeta) {
+      const metaParts = []
+      if (payload.model) {
+        metaParts.push(`Model ${payload.model}`)
+      }
+      if (payload.finishReason) {
+        metaParts.push(`Finish ${payload.finishReason}`)
+      }
+      if (payload.usage) {
+        const { prompt_tokens: promptTokens, completion_tokens: completionTokens, total_tokens: totalTokens } =
+          payload.usage
+        if (totalTokens) {
+          metaParts.push(
+            `${totalTokens} tokens${promptTokens || completionTokens ? ` (${promptTokens || 0} prompt / ${completionTokens || 0} completion)` : ''}`
+          )
+        }
+      }
+      selectors.responseMeta.textContent = metaParts.join(' • ')
+    }
+
+    if (selectors.responseLoading) {
+      selectors.responseLoading.style.display = 'none'
+    }
+    if (selectors.responseContent) {
+      selectors.responseContent.style.display = 'flex'
+    }
+
+    return payload
+  } catch (error) {
+    const hint = isLocalEnvironment()
+      ? 'Make sure the server is running on port 3001 and ChatGPT_KEY is set in .env.local.'
+      : 'Make sure ChatGPT_KEY is configured in Vercel environment variables.'
+    if (selectors.responseError) {
+      selectors.responseError.style.display = 'block'
+      selectors.responseError.textContent = `Error: ${error.message}. ${hint}`
+    }
+    if (selectors.responseLoading) {
+      selectors.responseLoading.style.display = 'none'
+    }
+    if (selectors.responseContent) {
+      selectors.responseContent.style.display = 'none'
+    }
+    throw error
   }
 }
 
@@ -278,6 +445,7 @@ const handleGenerate = async () => {
     setCopyDisabled(true)
     setAnalyzeButtonVisible(false)
     state.lastOutput = ''
+    updateSendPromptAvailability()
     return
   }
 
@@ -285,28 +453,42 @@ const handleGenerate = async () => {
 
   if (isChatGPTMode) {
     // Use ChatGPT analysis mode
+    resetResponsePanel()
+    state.lastOutput = ''
+    updateSendPromptAvailability()
     showMessage('Analyzing with ChatGPT...')
     await callChatGPTAnalysis(text)
     showMessage('ChatGPT analysis complete.')
     // Hide analyze button when in ChatGPT mode
     setAnalyzeButtonVisible(false)
+    state.lastConfig = null
+    setApplyOriginalDisabled(true)
   } else {
     // Use traditional obfuscation methods
-    const methods = getEnabledMethods().filter(Boolean)
-    if (!methods.length) {
+    const currentSettings = captureCurrentSettings()
+    if (!currentSettings.methods.length) {
       showMessage('Enable at least one method to continue.', true)
       return
     }
 
-    const level = Number(selectors.intensitySlider?.value ?? 3)
-    const result = runTransformationPipeline(text, level, methods, transformations)
+    const result = runTransformationPipeline(
+      text,
+      currentSettings.intensity,
+      currentSettings.methods,
+      transformations
+    )
+    resetResponsePanel()
     setTransformedText(result)
     setCopyDisabled(false)
     state.lastOutput = result
-    showMessage(`${methods.length} method${methods.length > 1 ? 's' : ''} applied.`)
+    state.lastConfig = currentSettings
+    const methodCount = currentSettings.methods.length
+    showMessage(`${methodCount} method${methodCount > 1 ? 's' : ''} applied.`)
     
     // Show analyze button for generated output
     setAnalyzeButtonVisible(true)
+    setApplyOriginalDisabled(false)
+    updateSendPromptAvailability()
     
     // Hide ChatGPT analysis panel if it was shown before
     if (selectors.analysisPanel) {
@@ -345,12 +527,15 @@ const handleReset = () => {
   selectors.sourceField.value = ''
   setTransformedText(defaultTransformed)
   setCopyDisabled(true)
+  setApplyOriginalDisabled(true)
   setAnalyzeButtonVisible(false)
   applyRecommendedSettings()
   if (selectors.chatgptMode) {
     selectors.chatgptMode.checked = false
   }
   state.lastOutput = ''
+  state.lastConfig = null
+  updateSendPromptAvailability()
   showMessage('')
   updateCharCount()
   syncOriginalPreview()
@@ -365,6 +550,7 @@ const handleReset = () => {
   if (selectors.analysisCard) {
     selectors.analysisCard.classList.remove('bypass-success')
   }
+  resetResponsePanel()
 }
 
 const handleAnalyzeOutput = async () => {
@@ -377,6 +563,54 @@ const handleAnalyzeOutput = async () => {
   showMessage('Analyzing generated output...')
   await callChatGPTAnalysis(state.lastOutput)
   showMessage('Analysis complete.')
+}
+
+const handleApplyOriginalSettings = () => {
+  if (!state.lastOutput || !state.lastOutput.trim()) {
+    showMessage('Generate an obfuscated output first.', true)
+    return
+  }
+  if (!state.lastConfig || !state.lastConfig.methods?.length) {
+    showMessage('Original settings unavailable. Generate using the obfuscator first.', true)
+    return
+  }
+
+  applySettingsToUI(state.lastConfig)
+  const result = runTransformationPipeline(
+    state.lastOutput,
+    state.lastConfig.intensity,
+    state.lastConfig.methods,
+    transformations
+  )
+  resetResponsePanel()
+  state.lastOutput = result
+  setTransformedText(result)
+  setCopyDisabled(false)
+  setAnalyzeButtonVisible(true)
+  updateSendPromptAvailability()
+  showMessage('Original settings applied to transformed text.')
+}
+
+const handleSendPrompt = async () => {
+  if (!state.lastOutput || !state.lastOutput.trim()) {
+    showMessage('Generate an obfuscated output first.', true)
+    return
+  }
+
+  state.isSendingPrompt = true
+  updateSendPromptAvailability()
+  showMessage('Sending prompt to ChatGPT...')
+
+  try {
+    await callChatGPTPrompt(state.lastOutput)
+    showMessage('ChatGPT responded to your prompt.')
+  } catch (error) {
+    console.error('Send prompt error:', error)
+    showMessage('Unable to fetch ChatGPT response.', true)
+  } finally {
+    state.isSendingPrompt = false
+    updateSendPromptAvailability()
+  }
 }
 
 const bindEvents = () => {
@@ -392,6 +626,8 @@ const bindEvents = () => {
   selectors.copyButton?.addEventListener('click', handleCopy)
   selectors.resetButton?.addEventListener('click', handleReset)
   selectors.analyzeOutputButton?.addEventListener('click', handleAnalyzeOutput)
+  selectors.applyOriginalButton?.addEventListener('click', handleApplyOriginalSettings)
+  selectors.sendPromptButton?.addEventListener('click', handleSendPrompt)
   
   // Handle ChatGPT mode toggle
   selectors.chatgptMode?.addEventListener('change', () => {
@@ -424,4 +660,7 @@ const bindEvents = () => {
 applyRecommendedSettings()
 updateCharCount()
 syncOriginalPreview()
+setApplyOriginalDisabled(true)
+resetResponsePanel()
+updateSendPromptAvailability()
 bindEvents()
