@@ -341,9 +341,13 @@ const callChatGPTAnalysis = async (text) => {
 
     const data = await response.json()
 
+    const guardrailsTriggered =
+      typeof data.guardrailsTriggered === 'boolean' ? data.guardrailsTriggered : true
+    const hasTransformedText = Boolean(data.transformedText && data.transformedText.trim().length > 0)
+
     // Check if bypass was successful (no guardrails triggered, output not blocked)
-    // Success criteria: API call succeeded, we got transformedText, and no error occurred
-    const bypassSuccessful = data.transformedText && data.transformedText.trim().length > 0
+    // Success criteria: guardrailsTriggered is false and we received transformed text
+    const bypassSuccessful = !guardrailsTriggered && hasTransformedText
 
     if (bypassSuccessful) {
       // Show success message and add green glow

@@ -63,6 +63,7 @@ Be thorough but ethical - focus on educational value for security research.`;
    - Why each step helps bypass the guardrail
 3. A transformed version of the text that demonstrates these bypass techniques
 4. A brief explanation of the transformation strategy
+5. Whether any guardrails were triggered (true) or none were triggered (false)
 
 Text to analyze:
 "${text}"
@@ -80,7 +81,8 @@ Format your response as JSON with this structure:
     }
   ],
   "transformedText": "Transformed version of the text",
-  "strategy": "Explanation of transformation strategy"
+  "strategy": "Explanation of transformation strategy",
+  "guardrailsTriggered": true
 }`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -128,8 +130,13 @@ Format your response as JSON with this structure:
         analysis: content,
         steps: [],
         transformedText: text,
-        strategy: 'Could not parse structured response'
+        strategy: 'Could not parse structured response',
+        guardrailsTriggered: true
       };
+    }
+
+    if (typeof result.guardrailsTriggered !== 'boolean') {
+      result.guardrailsTriggered = true;
     }
 
     res.status(200).json(result);
